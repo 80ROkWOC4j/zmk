@@ -10,6 +10,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/bluetooth/services/bas.h>
+#include <math.h>
 
 #include <zephyr/logging/log.h>
 
@@ -36,16 +37,17 @@ static const struct device *battery;
 
 #if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING_FETCH_MODE_LITHIUM_VOLTAGE)
 static uint8_t lithium_ion_mv_to_pct(int16_t bat_mv) {
-    // Simple linear approximation of a battery based off adafruit's discharge graph:
-    // https://learn.adafruit.com/li-ion-and-lipoly-batteries/voltages
+    // Map the measured cell voltage onto Adafruit's LiPo discharge curve.
+    double pct = 106.818 + (-0.032685 - 106.818) /
+                               pow(1 + pow((double)bat_mv / 3679.35, 58.979), 0.347386);
 
-    if (bat_mv >= 4200) {
-        return 100;
-    } else if (bat_mv <= 3450) {
+    if (pct <= 0) {
         return 0;
+    } else if (pct >= 100) {
+        return 100;
     }
 
-    return bat_mv * 2 / 15 - 459;
+    return (uint8_t)round(pct);
 }
 
 #endif // IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING_FETCH_MODE_LITHIUM_VOLTAGE)

@@ -5,6 +5,7 @@
  */
 
 #include <errno.h>
+#include <math.h>
 #include <zephyr/drivers/sensor.h>
 
 #include "battery_common.h"
@@ -30,14 +31,15 @@ int battery_channel_get(const struct battery_value *value, enum sensor_channel c
 }
 
 uint8_t lithium_ion_mv_to_pct(int16_t bat_mv) {
-    // Simple linear approximation of a battery based off adafruit's discharge graph:
-    // https://learn.adafruit.com/li-ion-and-lipoly-batteries/voltages
+    // Map the measured cell voltage onto Adafruit's LiPo discharge curve.
+    double pct = 106.818 + (-0.032685 - 106.818) /
+                               pow(1 + pow((double)bat_mv / 3679.35, 58.979), 0.347386);
 
-    if (bat_mv >= 4200) {
-        return 100;
-    } else if (bat_mv <= 3450) {
+    if (pct <= 0) {
         return 0;
+    } else if (pct >= 100) {
+        return 100;
     }
 
-    return bat_mv * 2 / 15 - 459;
+    return (uint8_t)round(pct);
 }
