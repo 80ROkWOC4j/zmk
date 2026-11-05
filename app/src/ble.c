@@ -32,6 +32,9 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/ble.h>
+#if IS_ENABLED(CONFIG_TOTEM_HOST_NAMES)
+#include <totem/host_names.h>
+#endif
 #include <zmk/keys.h>
 #include <zmk/split/bluetooth/uuid.h>
 #include <zmk/event_manager.h>
@@ -110,6 +113,9 @@ void set_profile_address(uint8_t index, const bt_addr_le_t *addr) {
 
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
 
+#if IS_ENABLED(CONFIG_TOTEM_HOST_NAMES)
+    totem_host_names_forget(index);
+#endif
     memcpy(&profiles[index].peer, addr, sizeof(bt_addr_le_t));
     sprintf(setting_name, "ble/profiles/%d", index);
     LOG_DBG("Setting profile addr for %s to %s", setting_name, addr_str);

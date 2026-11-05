@@ -10,6 +10,9 @@
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/event_manager.h>
+#if IS_ENABLED(CONFIG_TOTEM_HOST_NAMES)
+#include <totem/name_hooks.h>
+#endif
 
 extern struct zmk_event_type *__event_type_start[];
 extern struct zmk_event_type *__event_type_end[];
@@ -45,7 +48,19 @@ int zmk_event_manager_handle_from(zmk_event_t *event, uint8_t start_index) {
     return 0;
 }
 
-int zmk_event_manager_raise(zmk_event_t *event) { return zmk_event_manager_handle_from(event, 0); }
+int zmk_event_manager_raise(zmk_event_t *event) {
+#if IS_ENABLED(CONFIG_TOTEM_HOST_NAMES)
+    if (totem_host_names_capture(event)) {
+        totem_host_names_after_dispatch();
+        return 0;
+    }
+#endif
+    int result = zmk_event_manager_handle_from(event, 0);
+#if IS_ENABLED(CONFIG_TOTEM_HOST_NAMES)
+    totem_host_names_after_dispatch();
+#endif
+    return result;
+}
 
 int zmk_event_manager_raise_after(zmk_event_t *event, const struct zmk_listener *listener) {
     uint8_t len = __event_subscriptions_end - __event_subscriptions_start;
